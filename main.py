@@ -1,5 +1,6 @@
 # Copyright (c) 2015-present, Facebook, Inc.
 # All rights reserved.
+import os
 import argparse
 import datetime
 import numpy as np
@@ -344,6 +345,12 @@ def main(args):
     )
 
     output_dir = Path(args.output_dir)
+    # auto resuming
+    if args.resume == 'auto':
+        if os.path.exists(output_dir / 'checkpoint.pth'):
+            args.resume = str(output_dir / 'checkpoint.pth')
+        else:
+            args.resume = ''
     if args.resume:
         if args.resume.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(
