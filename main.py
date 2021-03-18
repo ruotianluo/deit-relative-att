@@ -25,6 +25,8 @@ from samplers import RASampler
 import models
 import utils
 
+import attention_surgery
+
 
 def get_args_parser():
     parser = argparse.ArgumentParser('DeiT training and evaluation script', add_help=False)
@@ -166,6 +168,13 @@ def get_args_parser():
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
+
+    # Surgury to attention in vit
+    parser.add_argument('--attention_surgery', default='none', type=str,
+                        help='progressive, relative')
+    parser.add_argument('--attention_surgery_args', default='%{}', type=str,
+                        help='for different args, like update func')
+    
     return parser
 
 
@@ -247,6 +256,12 @@ def main(args):
         drop_path_rate=args.drop_path,
         drop_block_rate=None,
     )
+
+    ###################################################################
+    # attention surgery
+    ###################################################################
+    if args.attention_surgery != 'none':
+        on_epoch_start_hook = attention_surgery.do_surgery(model, args.attention_surgery, args.attention_surgery_args)
 
     if args.finetune:
         if args.finetune.startswith('https'):
@@ -378,6 +393,10 @@ def main(args):
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             data_loader_train.sampler.set_epoch(epoch)
+
+        # on epoch start hook
+        if locals().get('on_epoch_start_hook', None):
+            on_epoch_start_hook(epoch)
 
         train_stats = train_one_epoch(
             model, criterion, data_loader_train,
