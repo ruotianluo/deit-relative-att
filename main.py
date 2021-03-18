@@ -25,6 +25,7 @@ from samplers import RASampler
 import models
 import utils
 
+import wandb
 import attention_surgery
 
 
@@ -263,6 +264,12 @@ def main(args):
     if args.attention_surgery != 'none':
         on_epoch_start_hook = attention_surgery.do_surgery(model, args.attention_surgery, args.attention_surgery_args)
 
+    # wandb logging
+    if utils.get_rank() == 0:
+        wandb.init(project='deit', id=args.output_dir.split('/')[-1], resume='allow')
+        wandb.config.update(args, allow_val_change=True)
+        wandb.watch(model)
+
     if args.finetune:
         if args.finetune.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(
@@ -428,6 +435,15 @@ def main(args):
                      **{f'test_{k}': v for k, v in test_stats.items()},
                      'epoch': epoch,
                      'n_parameters': n_parameters}
+        if utils.get_rank() == 0:
+            wandb.log(
+                {f'train_{k}': v for k, v in train_stats.items()},
+                step=epoch,
+            )
+            wandb.log(
+                {f'test_{k}': v for k, v in test_stats.items()},
+                step=epoch,
+            )
 
         if args.output_dir and utils.is_main_process():
             with (output_dir / "log.txt").open("a") as f:
