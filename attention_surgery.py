@@ -121,6 +121,7 @@ def do_surgery(model, attention_surgery, attention_surgery_args):
         remove_position_embedding(model)
         for block in model.blocks:
             block.attn.__class__ = T5RelativeAttention
+            # For simplicity, we don't share rel pos embed across layers.
             block.attn.add_betas(
                 model.patch_embed.img_size,
                 model.patch_embed.patch_size,
@@ -136,13 +137,21 @@ def do_surgery(model, attention_surgery, attention_surgery_args):
 
 
 class T5RelativeAttention(Attention):
+    """
+    Reference: https://arxiv.org/pdf/1910.10683.pdf
+    We use a simplified form of position embeddings
+where each “embedding” is simply a scalar that is addedto the corresponding logit used
+for computing the attention weights. For efficiency, we also share the position embedding
+parameters across all layers in our model, though within a given layer each attention head
+uses a different learned position embedding. 
+    """
     def add_betas(self, img_size, patch_size):
         self.register_buffer('mapping_indices',
             self.create_index_mapping(img_size, patch_size), persistent=False)
         N = self.mapping_indices.shape[0]  # how many patches
-        self.beta1 = nn.Parameter(torch.zeros(1, 1+N))
-        self.beta2 = nn.Parameter(torch.zeros(N, 1))
-        self.beta3 = nn.Parameter(torch.zeros(self.mapping_indices.max().item()+1))
+        self.beta1 = nn.Parameter(torch.zeros(self.num_heads, 1, 1+N))
+        self.beta2 = nn.Parameter(torch.zeros(self.num_heads, N, 1))
+        self.beta3 = nn.Parameter(torch.zeros(self.num_heads, self.mapping_indices.max().item()+1))
         # the idea is
         # beta  = 
         # b rearraged(beta)
@@ -155,8 +164,8 @@ class T5RelativeAttention(Attention):
     def get_beta_matrix(self):
         N = self.mapping_indices.shape[0]
         beta_matrix = torch.cat([
-            torch.cat([self.beta2, self.beta3[self.mapping_indices]], 1),
-            self.beta1])
+            torch.cat([self.beta2, self.beta3[:, self.mapping_indices]], 2),
+            self.beta1], dim=1)
         return beta_matrix
 
     def create_index_mapping(self, img_size, patch_size):
@@ -185,7 +194,7 @@ class T5RelativeAttention(Attention):
         attn = (q @ k.transpose(-2, -1)) * self.scale
 
         # only change here
-        attn += self.get_beta_matrix()
+        attn += self.get_beta_matrix() # h x N x N
 
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
