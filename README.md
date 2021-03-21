@@ -1,3 +1,27 @@
+# DeiT-relative-attention
+
+Some dummy attempts to play with the attentions.
+
+## Progressive attention (doesn't work)
+Increase the attention range progressively. For each patch, we start with only attend to itself; then progressively attend more to the close patches. Worse performance.
+```
+python -m torch.distributed.launch --nproc_per_node=4 --use_env main.py --model deit_tiny_patch16_224 --batch-size 256 --data-path /vscratch/data/imagenet1k/ --output_dir deit_tiny_patch16_224_prog --attention_surgery progressive --resume auto
+```
+
+## Relative attention : )
+Following "Self-Attention with Relative Position Representations". Seems to be working better on deit-tiny.
+```
+python -m torch.distributed.launch --nproc_per_node=4 --use_env main.py --model deit_tiny_patch16_224 --batch-size 256 --data-path /vscratch/data/imagenet1k/ --output_dir deit_tiny_patch16_224_rel --attention_surgery relative --resume auto
+```
+
+Acc1: [72.4 -> 73.7](https://wandb.ai/ruotianluo/deit/reports/Snapshot-Mar-21-2021-11-8am--Vmlldzo1NDgwNDM?accessToken=gphern2fbh885lsb33bb9lb3hzem95qb5ynhud1v23ct74z445jgkyyt5625643m)
+
+## Relative attention from T5.
+Following relative attention design in T5. Only work slightly better than baseline it seems,
+```
+python -m torch.distributed.launch --nproc_per_node=4 --use_env main.py --model deit_tiny_patch16_224 --batch-size 256 --data-path /vscratch/data/imagenet1k/ --output_dir deit_tiny_patch16_224_t5relative --attention_surgery t5_relative --resume auto
+```
+
 # DeiT: Data-efficient Image Transformers
 
 This repository contains PyTorch evaluation code, training code and pretrained models for DeiT (Data-Efficient Image Transformers).
