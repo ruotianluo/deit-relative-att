@@ -16,6 +16,8 @@ python -m torch.distributed.launch --nproc_per_node=4 --use_env main.py --model 
 
 Tiny: Acc1 [72.4 -> 73.7](https://wandb.ai/ruotianluo/deit/reports/Snapshot-Mar-21-2021-11-8am--Vmlldzo1NDgwNDM?accessToken=gphern2fbh885lsb33bb9lb3hzem95qb5ynhud1v23ct74z445jgkyyt5625643m); [checkpoint](https://drive.google.com/file/d/1Zm2C2vg0WVNeLAosemddcdmjijjzhDZZ/view?usp=sharing)
 
+Small: Acc1 [79.9 -> 81.0](https://wandb.ai/ruotianluo/deit/reports/Snapshot-Apr-9-2021-11-3pm--Vmlldzo1OTY3MjU?accessToken=oey5dpkqc2y3l67ekzzi16y1nfj3jmgf5cixyorj342ncq6atd689g9ssnz89v98); [checkpoint](https://drive.google.com/drive/folders/1LbLctPC1_aZxTnwW5YdsGFpAAO1FzIFt?usp=sharing)
+
 ## Relative attention from T5.
 Following relative attention design in T5. Only work slightly better than baseline it seems,
 ```
